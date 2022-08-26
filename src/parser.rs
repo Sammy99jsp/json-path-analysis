@@ -189,7 +189,15 @@ impl TokenParser for Token {
                         }
                         Err(ParserError::UnexpectedToken(chr))
                     },
-                    _ => Ok(TokenParseState::End),
+                    ch if ch.is_ascii_whitespace() => {
+                        if content.content.ends_with(".") {
+                            Err(ParserError::UnexpectedToken(chr))
+                        } else {
+                            Ok(TokenParseState::End)
+                        }
+                    },
+                    ',' | ':' | '{' | '}' | '[' | ']' => Ok(TokenParseState::End),
+                    _ => Err(ParserError::UnexpectedToken(chr)),
                 }
             }
 
@@ -201,7 +209,12 @@ impl TokenParser for Token {
                         return Ok(TokenParseState::Continue);
                     } else {
                         if content.content.len() > 1 {
-                            return Ok(TokenParseState::End);
+                            match chr.content {
+                                ch if ch.is_whitespace() => {
+                                    return Ok(TokenParseState::End);
+                                },
+                                _ => return Err(ParserError::UnexpectedToken(chr))
+                            }
                         }
                     }
                 }
@@ -271,13 +284,70 @@ impl Source {
     }
 }
 
+struct Tokenizer;
+
+impl Tokenizer {
+    fn tokenize(src : &mut Source) -> Result<Vec<Token>, ParserError> {
+        let mut tokens: Vec<Token> = vec![];
+        let mut current_token: Option<Token> = None;
+
+        while let Some(c) = src.next() {
+            match current_token.clone() {
+                Some(mut token) => {
+                    match token.parse(c)? {
+                        // If this new character cannot be part
+                        //  of the current token, push the current token,
+                        //  and redo this last character.
+                        TokenParseState::End => {
+                            tokens.push(token);
+                            current_token = None;
+                            src.back();
+                        }
+                        TokenParseState::Continue => {
+                            current_token = Some(token);
+                        }
+                    }
+                }
+                None => {
+                    current_token = Some(c.try_into()?);
+                }
+            }
+        }
+
+        if let Some(t) = &current_token {
+            tokens.push(t.clone());
+        }
+
+        Ok(tokens)
+    } 
+}
+
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, fmt::Display};
+
+    use colored::Colorize;
 
     use crate::parser::TokenParseState;
 
-    use super::{CharLoc, ParserError, Source, Token, TokenContent, TokenParser};
+    use super::{CharLoc, ParserError, Source, Token, TokenContent, TokenParser, Tokenizer};
+
+    impl Display for ParserError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::UnexpectedToken(e) => {
+                    write!(f, "{} {} {}\n  {} at {}",
+                        "Error -".red(),
+                        "Unexpected Token".bold().red(),
+                        format!("\"{}\"", e.content).blue(),
+                        "-->".blue().bold(),
+                        format!("{}:{}", e.location.0, e.location.1).yellow().bold(),
+                    )
+                },
+                Self::Empty => todo!()
+            }
+        }
+    }
 
     #[test]
     fn test_eat() {
@@ -347,43 +417,18 @@ mod tests {
     }
 
     #[test]
-    fn test_token() -> Result<(), ParserError> {
+    fn test_token() {
         let mut src = Source::new(fs::read_to_string("./tests/2.txt").unwrap());
 
-        let mut tokens: Vec<Token> = vec![];
-        let mut current_token: Option<Token> = None;
+        let tokens = Tokenizer::tokenize(&mut src);
 
-        while let Some(c) = src.next() {
-            match current_token.clone() {
-                Some(mut token) => {
-                    match token.parse(c)? {
-                        // If this new character cannot be part
-                        //  of the current token, push the current token,
-                        //  and redo this last character.
-                        TokenParseState::End => {
-                            tokens.push(token);
-                            current_token = None;
-                            src.back();
-                        }
-                        TokenParseState::Continue => {
-                            current_token = Some(token);
-                        }
-                    }
+        match tokens {
+            Ok(tks) => {
+                for t in tks {
+                    println!("{}", t);
                 }
-                None => {
-                    current_token = Some(c.try_into()?);
-                }
-            }
+            },
+            Err(err) => println!("{}", err)
         }
-
-        if let Some(t) = &current_token {
-            tokens.push(t.clone());
-        }
-
-        for t in tokens {
-            println!("{}", t);
-        }
-
-        Ok(())
     }
 }
