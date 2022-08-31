@@ -1,5 +1,5 @@
 {
-    "one_point_two" : 1.2,
+    "one_point_two" : -1.2,
     "emoji": {
         "eyes": "👀"
     }
