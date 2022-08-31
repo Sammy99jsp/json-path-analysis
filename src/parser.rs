@@ -887,7 +887,7 @@ impl Value {
         };
 
         // Line and Column number
-        let (startl, startc) = match self {
+        let (start_line, start_column) = match self {
             Self::Array(l, _) => l.start,
             Self::Object(l, _) => l.start,
             Self::StringLiteral(l, _) => l.start,
@@ -895,7 +895,7 @@ impl Value {
             Self::NullLiteral(l) => l.start,
         };
 
-        let location = format!("{startl}:{startc}").blue();
+        let location = format!("{start_line}:{start_column}").blue();
 
         let mut lines: Vec<String> = vec![format!(
             "{pad}[{location}] {token_type}{extra}",

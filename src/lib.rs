@@ -44,9 +44,9 @@ impl Parser {
 
     ) -> Result<Value, ParserError<TokenContent>>
     {
-        let tkns = Tokenizer::tokenize(src)
+        let tokens = Tokenizer::tokenize(src)
             .map_err(|p| p.into())?;
         
-        Value::parse(&mut tkns.iter().peekable())
+        Value::parse(&mut tokens.iter().peekable())
     }
 }
