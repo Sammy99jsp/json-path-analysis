@@ -69,25 +69,43 @@ pub enum TokenParseState {
     End,
 }
 
+pub fn end_escape_lookbehind(st: &str, target: char) -> bool {
+    let mut count = 0usize;
+    let mut start = false;
+    if !st.ends_with(target) {
+        return true;
+    }
+
+    for c in st.chars().rev() {
+        if c == target {
+            if start {
+                break
+            }
+            start = true;
+            continue;
+        }
+
+        if !start {
+            continue;
+        }
+
+        match c == '\\' {
+            true =>  count += 1,
+            false=>  break
+        } 
+    }
+
+
+        
+    count % 2 == 1
+}
+
 pub trait TokenParser {
     ///
     /// Returns if a character is escaped by '\\' at the end of the string
     ///
     fn end_escape_lookbehind(st: &str, target: char) -> bool {
-        let mut count = 0usize;
-        let mut start = false;
-        for c in st.chars().rev() {
-            if c == target {
-                start = true;
-                continue;
-            }
-
-            if c == '\\' && start {
-                count += 1;
-            }
-        }
-
-        return count % 2 == 1;
+        end_escape_lookbehind(st, target)
     }
 
     ///
@@ -199,7 +217,7 @@ impl Display for Token {
             Self::StringLiteral(co) => format!(
                 "{}({})",
                 "StringLiteral".purple(),
-                format!("{}", co.content).blue()
+                format!("{}", co.content.escape_debug()).blue()
             ),
             Self::NumberLiteral(co) => format!(
                 "{}({})",
@@ -445,32 +463,22 @@ impl TokenParser for Token {
             }
 
             Self::StringLiteral(content) => {
-                if content.content.ends_with("\"") {
-                    // Has the string got an escaped " ?
-                    if Token::end_escape_lookbehind(&content.content, '"') {
-                        content.append(chr);
-                        return Ok(TokenParseState::Continue);
-                    } else {
+                match Token::end_escape_lookbehind(&content.content, '"') {
+                    false => {
                         if content.content.len() > 1 {
-                            match chr.content {
-                                ch if ch.is_whitespace() => {
-                                    return Ok(TokenParseState::End);
-                                }
-                                ',' | ':' | '{' | '}' | '[' | ']' => {
-                                    return Ok(TokenParseState::End)
-                                }
-                                _ => return Err(ParserError::UnexpectedToken(chr)),
-                            }
+                            return Ok(TokenParseState::End);
                         }
-                    }
+                    },
+                    true => {}
                 }
 
-                if chr.content == '\n' {
-                    return Err(ParserError::UnexpectedToken(chr));
+                match chr.content {
+                    '\n' => return Err(ParserError::UnexpectedToken(chr)),
+                    _ => {}
                 }
-
+                
                 content.append(chr);
-                Ok(TokenParseState::Continue)
+                return Ok(TokenParseState::Continue);
             }
         }
     }
@@ -1050,9 +1058,17 @@ mod tests {
 
     #[test]
     fn test_escape_lookbehind() {
-        assert_eq!(Token::end_escape_lookbehind(r"\\\\'", '\''), false);
+        assert_eq!(
+            Token::end_escape_lookbehind(r"\\\\'", '\''),
+            false
+        );
 
         assert_eq!(Token::end_escape_lookbehind(r"\\\'", '\''), true);
+        
+        
+        assert_eq!(Token::end_escape_lookbehind(r"\\      '", '\''), false);
+        assert_eq!(Token::end_escape_lookbehind(r"abcdefghijk", '\''), false);
+
     }
 
     #[test]

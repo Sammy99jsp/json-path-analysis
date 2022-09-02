@@ -25,6 +25,8 @@
 //! 
 
 mod parser;
+mod indexer;
+mod path;
 
 pub use parser::Source;
 pub use parser::ParserError;

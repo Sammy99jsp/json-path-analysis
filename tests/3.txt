@@ -1,3 +1,11 @@
-[
-    1, 2, null, ""
-]
+{
+    "string": {
+        "parsing: ": "abcef",
+        "se_ya" : [
+            "later",
+            "alligator",
+            "in", "a", "while",
+            "crocodile"
+        ]
+    }
+}
