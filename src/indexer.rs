@@ -1,6 +1,45 @@
-use std::{collections::HashMap};
+use std::{collections::HashMap, fmt::Debug};
 
-use crate::{Value::{self, *}, TokenContent, path::JSONPath};
+use crate::{Value::{self, *}, TokenContent, path::JSONPath,};
+
+///
+/// Helper enum to allow for reference to both a value
+/// and its key (if exists)
+/// 
+pub enum Location {
+    Value(TokenContent),
+    KeyValue(TokenContent, TokenContent)
+}
+
+impl Debug for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Value(arg0) => {
+                f
+                    .debug_tuple("Value")
+                    .field(&format!("{:?}", arg0.loc()))
+                    .finish()
+            },
+            Self::KeyValue(arg0, arg1) => 
+                f.debug_map()
+                    .entry(&"Key", &format!("{:?}", arg0.loc()))
+                    .entry(&"Value", &format!("{:?}", arg1.loc()))
+                    .finish(),
+        }
+    }
+}
+
+impl<'a> From<&'a TokenContent> for Location {
+    fn from(a: &'a TokenContent) -> Self {
+        Self::Value(a.clone())
+    }
+}
+
+impl<'a> From<(&'a TokenContent, &'a TokenContent)> for Location {
+    fn from((k, v): (&'a TokenContent, &'a TokenContent)) -> Self {
+        Self::KeyValue(k.clone(), v.clone())
+    }
+}
 
 ///
 /// Helper struct for indexing a parsed JSON file.
@@ -11,16 +50,16 @@ impl Indexer {
     ///
     /// Index a JSON root value into a HashMap of JSONPath => TokenContent (source location)
     /// 
-    pub fn index(val : &Value, map : &mut HashMap<JSONPath, TokenContent>, path: Option<JSONPath>) {
+    pub fn index(val : &Value, map : &mut HashMap<JSONPath, Location>, path: Option<JSONPath>) {
         let path = path.unwrap_or(JSONPath::default());
 
-        map.insert(path.clone(), val.content().clone());
+        map.insert(path.clone(), val.content().into());
 
         match val {
             StringLiteral(l, _)
             | NumberLiteral(l, _)
             | NullLiteral(l) => {
-                map.insert(path.clone(), l.clone());
+                map.insert(path.clone(), l.into());
             },
             Object(_, c) => {
                 
@@ -28,7 +67,10 @@ impl Indexer {
                     // Maps the Location in the index to the location of the value 
                     match k {
                         StringLiteral(_, val) => {
-                            map.insert(path.push(val.clone()), v.content().clone());
+                            map.insert(
+                                path.push(val.clone()), 
+                                (k.content(), v.content()).into()
+                            );
                         },
                         _ => unimplemented!()
                     }
@@ -42,11 +84,11 @@ impl Indexer {
                 }
             },
             Array(l, arr) => {
-                map.insert(path.clone(), l.clone());
+                map.insert(path.clone(), l.into());
                 for (i, v) in arr.iter().enumerate() {
 
                     let p = path.push(i);
-                    map.insert(p.clone(), v.content().clone());
+                    map.insert(p.clone(), v.content().into());
 
                     match v {
                         StringLiteral(_, _) | NumberLiteral(_, _) | NullLiteral(_) => {},
@@ -86,7 +128,7 @@ mod tests {
 
 
                         for (k, v) in index.iter() {
-                            println!("{k} => {:?}", v.loc());
+                            println!("{k} => {:?}", v);
                         }
 
                     }
