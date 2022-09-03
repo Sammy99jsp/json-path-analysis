@@ -540,7 +540,6 @@ impl TokenParser for Token {
                         _ => return Err(ParserError::UnexpectedToken(chr))
                     },
                     _ => {
-                        println!("Inside a {:?} comment!", comment_type);
                         match comment_type {
                             CommentType::Line => {
                                 if content.content.ends_with("\n") {
@@ -839,8 +838,6 @@ impl Value {
         
         while let Some(tkn) = iter.peek() {
             last_loc = tkn.content().clone();
-            println!("Expected {}", format[format_i]);
-            println!("{}", tkn);
             acc_location += tkn.content();
 
             if tkn.is_empty() {
@@ -853,7 +850,6 @@ impl Value {
                     0 => {
                         if contents.len() == 0 {
                             iter.next();
-                            println!("\n");
                             return Ok(Self::Array(acc_location, contents));
                         }
 
@@ -861,7 +857,6 @@ impl Value {
                     },
                     1 => {
                         iter.next();
-                        println!("\n");
                         return Ok(Self::Array(acc_location, contents));
                     }
                     _ => unreachable!(),
@@ -916,15 +911,11 @@ impl Value {
 
         let mut key: Option<Value> = None;
 
-        let mut i = -1;
 
         let mut last_loc: TokenContent = TokenContent::unit();
 
         while let Some(tkn) = iter.peek() {
             last_loc = tkn.content().clone();
-            i += 1;
-            println!("E: {}", format[format_i]);
-            println!("{} {}", i.to_string().color("#FFAA00"), tkn);
 
             acc_location += tkn.content();
 
@@ -938,13 +929,11 @@ impl Value {
                 Token::ObjectClose(_) => match format_i % 4 {
                     3 => {
                         iter.next();
-                        println!("\n");
                         return Ok(Value::Object(acc_location, contents));
                     },
                     0 => {
                         if contents.len() == 0 {
                             iter.next();
-                            println!("\n");
                             return Ok(Value::Object(acc_location, contents));
                         }
                     }
