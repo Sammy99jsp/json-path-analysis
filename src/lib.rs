@@ -28,15 +28,15 @@ pub mod parser;
 pub mod indexer;
 pub mod path;
 
-pub use parser::Source;
-pub use parser::ParserError;
-pub use parser::TokenContent;
-pub use parser::Value;
-pub use indexer::Indexer;
-pub use parser::Tokenizer;
-pub use indexer::Location;
-pub use path::JSONPath;
-pub use path::PathSegment;
+pub use crate::parser::Source;
+pub use crate::parser::ParserError;
+pub use crate::parser::TokenContent;
+pub use crate::parser::Value;
+pub use crate::indexer::Indexer;
+pub use crate::parser::Tokenizer;
+pub use crate::indexer::Location;
+pub use crate::path::JSONPath;
+pub use crate::path::PathSegment;
 
 ///
 /// Parses JSON files into a Value,
