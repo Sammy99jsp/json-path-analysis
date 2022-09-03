@@ -1,8 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use crate::{Value::{self, *}, TokenContent, path::JSONPath,};
+use crate::{Value::{self, *}, TokenContent, JSONPath,};
 
-pub type Index = HashMap<JSONPath, Location>;
 ///
 /// Helper enum to allow for reference to both a value
 /// and its key (if exists)
@@ -51,7 +50,7 @@ impl Indexer {
     ///
     /// Index a JSON root value into a HashMap of JSONPath => TokenContent (source location)
     /// 
-    pub fn index(val : &Value, map : &mut Index, path: Option<JSONPath>) {
+    pub fn index(val : &Value, map : &mut HashMap<JSONPath, Location>, path: Option<JSONPath>) {
         let path = path.unwrap_or(JSONPath::default());
 
         map.insert(path.clone(), val.content().into());
