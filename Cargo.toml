@@ -1,7 +1,10 @@
 [package]
 name = "json-tree"
+description="Tools for parsing and indexing JSON files."
 version = "0.1.0"
 edition = "2021"
+authors = ["Sammy99jsp <sammy99jsp@avdanos.com>"]
+license = "GPL-3.0"
 
 [features]
 jsonc = []
