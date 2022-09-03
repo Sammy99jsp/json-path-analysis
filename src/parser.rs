@@ -269,7 +269,7 @@ impl Token {
 
             #[cfg(feature = "jsonc")]
             Self::Comment(_, _) => true,
-            
+
             _ => false,
         }
     }
@@ -849,7 +849,15 @@ impl Value {
 
             match tkn {
                 Token::ArrayClose(_) => match format_i % 2 {
-                    0 => return Err(ParserError::UnexpectedToken(tkn.content().clone())),
+                    0 => {
+                        if contents.len() == 0 {
+                            iter.next();
+                            println!("\n");
+                            return Ok(Self::Array(acc_location, contents));
+                        }
+
+                        return Err(ParserError::UnexpectedToken(tkn.content().clone()))
+                    },
                     1 => {
                         iter.next();
                         println!("\n");
@@ -931,6 +939,13 @@ impl Value {
                         iter.next();
                         println!("\n");
                         return Ok(Value::Object(acc_location, contents));
+                    },
+                    0 => {
+                        if contents.len() == 0 {
+                            iter.next();
+                            println!("\n");
+                            return Ok(Value::Object(acc_location, contents));
+                        }
                     }
                     _ => {}
                 },
@@ -1108,7 +1123,7 @@ mod tests {
 
     #[test]
     fn test_eat() {
-        let mut src = Source::new(fs::read_to_string("./tests/1.txt").unwrap());
+        let mut src = Source::new(fs::read_to_string("./tests/eater.txt").unwrap());
 
         assert_eq!(
             src.next(),
@@ -1177,13 +1192,29 @@ mod tests {
         
         
         assert_eq!(Token::end_escape_lookbehind(r"\\      '", '\''), false);
-        assert_eq!(Token::end_escape_lookbehind(r"abcdefghijk", '\''), false);
+        assert_eq!(Token::end_escape_lookbehind(r"abcdefghijk", '\''), true);
 
     }
 
     #[test]
     fn test_value() {
-        let mut src = Source::new(fs::read_to_string("./tests/3.txt").unwrap());
+        let mut src = Source::new(fs::read_to_string("./tests/simple_heirarchy.json").unwrap());
+
+        let tokens = Tokenizer::tokenize(&mut src);
+
+        match tokens {
+            Ok(tks) => match Value::parse(&mut tks.iter().peekable()) {
+                Ok(e) => println!("{}", e.display(None)),
+                Err(e) => println!("{e}"),
+            },
+            Err(err) => println!("{}", err),
+        }
+    }
+
+    #[cfg(feature = "jsonc")]
+    #[test]
+    fn test_comments() {
+        let mut src = Source::new(fs::read_to_string("./tests/comments.jsonc").unwrap());
 
         let tokens = Tokenizer::tokenize(&mut src);
 
@@ -1197,8 +1228,23 @@ mod tests {
     }
 
     #[test]
-    fn test_comments() {
-        let mut src = Source::new(fs::read_to_string("./tests/comments.txt").unwrap());
+    fn empty_object() {
+        let mut src = Source::new(fs::read_to_string("./tests/empty_object.json").unwrap());
+
+        let tokens = Tokenizer::tokenize(&mut src);
+
+        match tokens {
+            Ok(tks) => match Value::parse(&mut tks.iter().peekable()) {
+                Ok(e) => println!("{}", e.display(None)),
+                Err(e) => println!("{e}"),
+            },
+            Err(err) => println!("{}", err),
+        }
+    }
+
+    #[test]
+    fn empty_array() {
+        let mut src = Source::new(fs::read_to_string("./tests/empty_array.json").unwrap());
 
         let tokens = Tokenizer::tokenize(&mut src);
 
