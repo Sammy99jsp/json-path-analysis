@@ -15,7 +15,7 @@ impl Segment for String {
         lazy_static! {
             // Key that would not be able to be used
             // with the JS "." syntax -- instead use ["%key%"]
-            static ref UNSAFE_KEY : Regex = Regex::new("[^a-zA-Z_]+.*").unwrap();
+            static ref UNSAFE_KEY : Regex = Regex::new("[^a-zA-Z_\\$]+.*").unwrap();
         }
 
         match UNSAFE_KEY.is_match(&self) {
@@ -28,7 +28,7 @@ impl Segment for String {
         lazy_static! {
             // Key that would not be able to be used
             // with the JS "." syntax -- instead use ["%key%"]
-            static ref UNSAFE_KEY : Regex = Regex::new("[^a-zA-Z_]+.*").unwrap();
+            static ref UNSAFE_KEY : Regex = Regex::new("[^a-zA-Z_\\$]+.*").unwrap();
         }
 
         match UNSAFE_KEY.is_match(&self) {
