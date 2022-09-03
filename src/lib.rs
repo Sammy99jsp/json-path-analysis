@@ -35,6 +35,9 @@ pub use parser::Value;
 pub use indexer::Indexer;
 pub use parser::Tokenizer;
 pub use indexer::Index;
+pub use indexer::Location;
+pub use path::JSONPath;
+pub use path::PathSegment;
 
 ///
 /// Parses JSON files into a Value,
