@@ -66,7 +66,7 @@ impl From<CharLoc> for String {
 /// - send a signal to move on.
 ///
 #[derive(Debug, Copy, Clone)]
-pub enum TokenParseState {
+pub enum ParseState {
     Continue,
     End,
 }
@@ -113,7 +113,7 @@ pub trait TokenParser {
     ///
     /// Attempts to add another character to this token.
     ///
-    fn parse_char(&mut self, c: CharLoc) -> Result<TokenParseState, ParserError<CharLoc>>;
+    fn parse_char(&mut self, c: CharLoc) -> Result<ParseState, ParserError<CharLoc>>;
 }
 
 ///
@@ -159,7 +159,7 @@ impl TokenContent {
     ///
     /// Add characters or strings to this tokens content.
     ///
-    pub fn append<T: Into<String>>(&mut self, c: T) {
+    pub fn push<T: Into<String>>(&mut self, c: T) {
         self.content.push_str(&c.into());
     }
 
@@ -198,6 +198,14 @@ impl<'a> From<&'a str> for TokenContent {
     }
 }
 
+
+#[cfg(feature = "jsonc")]
+#[derive(Clone, Debug)]
+pub enum CommentType {
+    Line,
+    MultiLine
+}
+
 ///
 /// Represents a raw text token, which has not had its syntax
 /// checked.
@@ -214,8 +222,10 @@ pub enum Token {
     Colon(TokenContent),
     Empty(TokenContent),
     NullLiteral(TokenContent),
-
     __VALUE__,
+
+    #[cfg(feature = "jsonc")]
+    Comment(TokenContent, CommentType),
 }
 
 impl Display for Token {
@@ -240,6 +250,9 @@ impl Display for Token {
             Self::Empty(_) => format!("{}", "Empty".purple()),
             Self::NullLiteral(_) => format!("{}", "Null".purple()),
             Self::__VALUE__ => format!("{}", "%VALUE%".yellow()),
+
+            #[cfg(feature = "jsonc")]
+            Self::Comment(_, _) => format!("{}", "Comment".purple())
         };
         write!(f, "Token {t}")
     }
@@ -247,11 +260,16 @@ impl Display for Token {
 
 impl Token {
     ///
-    /// Returns if this token is whitespace or empty
+    /// Returns if this token should be ignored
+    /// by the parser (e.g. Comments, blank space, etc.)
     ///  
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Empty(_) => true,
+
+            #[cfg(feature = "jsonc")]
+            Self::Comment(_, _) => true,
+            
             _ => false,
         }
     }
@@ -346,6 +364,12 @@ impl Token {
                 _ => false,
             },
             Self::__VALUE__ => a.is_value(),
+            
+            #[cfg(feature = "jsonc")]
+            Self::Comment(_, _) => match a {
+                Self::Comment(_, _) => true,
+                _ => false
+            },
         }
     }
 
@@ -365,6 +389,9 @@ impl Token {
             Self::ObjectOpen(l) => l,
             Self::StringLiteral(l) => l,
             Self::__VALUE__ => unimplemented!(),
+
+            #[cfg(feature = "jsonc")]
+            Self::Comment(l, _) => l,
         }
     }
 }
@@ -374,6 +401,9 @@ impl TryFrom<CharLoc> for Token {
 
     fn try_from<'a>(c: CharLoc) -> Result<Self, Self::Error> {
         match c.content {
+            #[cfg(feature = "jsonc")]
+            '/' => Ok(Self::Comment(c.into(), CommentType::Line)),
+
             '{' => Ok(Self::ObjectOpen(c.into())),
             '}' => Ok(Self::ObjectClose(c.into())),
 
@@ -398,50 +428,50 @@ impl TryFrom<CharLoc> for Token {
 }
 
 impl TokenParser for Token {
-    fn parse_char(&mut self, chr: CharLoc) -> Result<TokenParseState, ParserError<CharLoc>> {
+    fn parse_char(&mut self, chr: CharLoc) -> Result<ParseState, ParserError<CharLoc>> {
         match self {
             Self::__VALUE__ => unimplemented!(),
 
             Self::Empty(content) => match chr.content {
                 ch if ch.is_ascii_whitespace() => {
-                    content.append(chr);
-                    Ok(TokenParseState::Continue)
+                    content.push(chr);
+                    Ok(ParseState::Continue)
                 }
-                _ => Ok(TokenParseState::End),
+                _ => Ok(ParseState::End),
             },
 
-            Self::Comma(_) => Ok(TokenParseState::End),
-            Self::Colon(_) => Ok(TokenParseState::End),
-            Self::ArrayClose(_) => Ok(TokenParseState::End),
-            Self::ArrayOpen(_) => Ok(TokenParseState::End),
-            Self::ObjectOpen(_) => Ok(TokenParseState::End),
-            Self::ObjectClose(_) => Ok(TokenParseState::End),
+            Self::Comma(_) => Ok(ParseState::End),
+            Self::Colon(_) => Ok(ParseState::End),
+            Self::ArrayClose(_) => Ok(ParseState::End),
+            Self::ArrayOpen(_) => Ok(ParseState::End),
+            Self::ObjectOpen(_) => Ok(ParseState::End),
+            Self::ObjectClose(_) => Ok(ParseState::End),
 
             Self::NullLiteral(content) => match content.content.as_str() {
                 "n" => match chr.content {
                     'u' => {
-                        content.append(chr);
-                        Ok(TokenParseState::Continue)
+                        content.push(chr);
+                        Ok(ParseState::Continue)
                     }
                     _ => Err(ParserError::UnexpectedToken(chr)),
                 },
                 "nu" => match chr.content {
                     'l' => {
-                        content.append(chr);
-                        Ok(TokenParseState::Continue)
+                        content.push(chr);
+                        Ok(ParseState::Continue)
                     }
                     _ => Err(ParserError::UnexpectedToken(chr)),
                 },
                 "nul" => match chr.content {
                     'l' => {
-                        content.append(chr);
-                        Ok(TokenParseState::Continue)
+                        content.push(chr);
+                        Ok(ParseState::Continue)
                     }
                     _ => Err(ParserError::UnexpectedToken(chr)),
                 },
                 "null" => match chr.content {
-                    ch if ch.is_ascii_whitespace() => Ok(TokenParseState::End),
-                    ',' | '}' | ']' => Ok(TokenParseState::End),
+                    ch if ch.is_ascii_whitespace() => Ok(ParseState::End),
+                    ',' | '}' | ']' => Ok(ParseState::End),
                     _ => Err(ParserError::UnexpectedToken(chr)),
                 },
                 _ => Err(ParserError::UnexpectedToken(content.clone().into())),
@@ -450,14 +480,14 @@ impl TokenParser for Token {
             Self::NumberLiteral(content) => {
                 match chr.content {
                     ch if ch.is_ascii_digit() => {
-                        content.append(chr);
-                        Ok(TokenParseState::Continue)
+                        content.push(chr);
+                        Ok(ParseState::Continue)
                     }
                     // Disallow multiple .'s in numbers
                     '.' => {
                         if !content.content.contains(".") {
-                            content.append(chr);
-                            return Ok(TokenParseState::Continue);
+                            content.push(chr);
+                            return Ok(ParseState::Continue);
                         }
                         Err(ParserError::UnexpectedToken(chr))
                     }
@@ -465,10 +495,10 @@ impl TokenParser for Token {
                         if content.content.ends_with(".") {
                             Err(ParserError::UnexpectedToken(chr))
                         } else {
-                            Ok(TokenParseState::End)
+                            Ok(ParseState::End)
                         }
                     }
-                    ',' | ':' | '{' | '}' | '[' | ']' => Ok(TokenParseState::End),
+                    ',' | ':' | '{' | '}' | '[' | ']' => Ok(ParseState::End),
                     _ => Err(ParserError::UnexpectedToken(chr)),
                 }
             }
@@ -477,7 +507,7 @@ impl TokenParser for Token {
                 match Token::end_escape_lookbehind(&content.content, '"') {
                     false => {
                         if content.content.len() > 1 {
-                            return Ok(TokenParseState::End);
+                            return Ok(ParseState::End);
                         }
                     },
                     true => {}
@@ -488,8 +518,50 @@ impl TokenParser for Token {
                     _ => {}
                 }
                 
-                content.append(chr);
-                return Ok(TokenParseState::Continue);
+                content.push(chr);
+                return Ok(ParseState::Continue);
+            }
+        
+            #[cfg(feature = "jsonc")]
+            Self::Comment(content, comment_type) => {
+                match content.content.len() {
+                    1 => match chr.content {
+                        '*' => {
+                            // Make a multiline comment.
+                            *comment_type = CommentType::MultiLine;
+                            content.push(chr);
+                            return Ok(ParseState::Continue);
+                        },
+                        '/' => {
+                            // Make a multiline comment.
+                            *comment_type = CommentType::Line;
+                            content.push(chr);
+                            return Ok(ParseState::Continue);
+                        },
+                        _ => return Err(ParserError::UnexpectedToken(chr))
+                    },
+                    _ => {
+                        println!("Inside a {:?} comment!", comment_type);
+                        match comment_type {
+                            CommentType::Line => {
+                                if content.content.ends_with("\n") {
+                                    return Ok(ParseState::End);
+                                }
+
+                                content.push(chr);
+                                return Ok(ParseState::Continue);
+                            },
+                            CommentType::MultiLine => {
+                                if content.content.ends_with("*/") {
+                                    return Ok(ParseState::End);
+                                }
+
+                                content.push(chr);
+                                return Ok(ParseState::Continue);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -592,12 +664,12 @@ impl Tokenizer {
                         // If this new character cannot be part
                         //  of the current token, push the current token,
                         //  and redo this last character.
-                        TokenParseState::End => {
+                        ParseState::End => {
                             tokens.push(token);
                             current_token = None;
                             src.back();
                         }
-                        TokenParseState::Continue => {
+                        ParseState::Continue => {
                             current_token = Some(token);
                         }
                     }
@@ -1084,12 +1156,12 @@ mod tests {
     fn test_token_content() {
         let mut content: TokenContent = "a".into();
 
-        content.append('p');
-        content.append('p');
-        content.append('l');
-        content.append('e');
-        content.append('s');
-        content.append('!');
+        content.push('p');
+        content.push('p');
+        content.push('l');
+        content.push('e');
+        content.push('s');
+        content.push('!');
 
         println!("{:?}", content)
     }
@@ -1112,6 +1184,21 @@ mod tests {
     #[test]
     fn test_value() {
         let mut src = Source::new(fs::read_to_string("./tests/3.txt").unwrap());
+
+        let tokens = Tokenizer::tokenize(&mut src);
+
+        match tokens {
+            Ok(tks) => match Value::parse(&mut tks.iter().peekable()) {
+                Ok(e) => println!("{}", e.display(None)),
+                Err(e) => println!("{e}"),
+            },
+            Err(err) => println!("{}", err),
+        }
+    }
+
+    #[test]
+    fn test_comments() {
+        let mut src = Source::new(fs::read_to_string("./tests/comments.txt").unwrap());
 
         let tokens = Tokenizer::tokenize(&mut src);
 

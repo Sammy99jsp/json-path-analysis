@@ -1,0 +1,14 @@
+{
+    // What I need to get for the party on Saturday.
+    //  Just Kidding -- I don't get invited to parties :(
+    "shopping_list": [
+        /*
+            People seemed to love my broccoli and cheese
+            last time.
+        */
+        "broccoli",
+        "potatoes",
+        "mozzarella",
+        "parmesan"
+    ]
+}
