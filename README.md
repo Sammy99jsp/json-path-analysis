@@ -12,7 +12,18 @@ use std::fs;
 use json_tree::{Source, Parser};
 
 let mut src = Source::new(fs::read_to_string("./tests/object_index.txt").unwrap());
+
+// Parse into tokens.
 let tokens = Tokenizer::tokenize(&mut src).unwrap();
 
+// Combine tokens into a value tree.
+let root = Value::parse(&mut tokens.iter().peekable());
 
+// Make an index 
+let mut index = HashMap::new();
+Indexer::index(&root, &mut index, None);
+
+for (k, v) in index.iter() {
+    println!("{k} => {:?}", v.loc());
+}
 ```
