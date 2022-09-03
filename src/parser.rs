@@ -29,12 +29,14 @@ where
     T: Into<TokenContent>,
 {
     UnexpectedToken(T),
+    UnexpectedEnd(T, char)
 }
 
 impl Into<ParserError<TokenContent>> for ParserError<CharLoc> {
     fn into(self) -> ParserError<TokenContent> {
         match self {
             Self::UnexpectedToken(s) => ParserError::UnexpectedToken(s.into()),
+            Self::UnexpectedEnd(s, c) => ParserError::UnexpectedEnd(s.into(), c)
         }
     }
 }
@@ -130,6 +132,8 @@ pub struct TokenContent {
     start: (usize, usize),
 }
 
+
+
 impl AddAssign for TokenContent {
     fn add_assign(&mut self, rhs: Self) {
         self.content.push_str(&rhs.content);
@@ -157,6 +161,13 @@ impl TokenContent {
     ///
     pub fn append<T: Into<String>>(&mut self, c: T) {
         self.content.push_str(&c.into());
+    }
+
+    ///
+    /// Returns the starting index of this token.
+    /// 
+    pub fn loc(&self) -> (usize, usize) {
+        self.start.clone()
     }
 }
 
@@ -750,8 +761,11 @@ impl Value {
         let mut acc_location = parent_tkn.content().clone();
 
         let mut contents: Vec<Value> = vec![];
-
+        let mut last_loc: TokenContent = TokenContent::unit();
+        
+        
         while let Some(tkn) = iter.peek() {
+            last_loc = tkn.content().clone();
             println!("Expected {}", format[format_i]);
             println!("{}", tkn);
             acc_location += tkn.content();
@@ -790,7 +804,7 @@ impl Value {
             format_i = (format_i + 1) % 2;
         }
 
-        todo!()
+        Err(ParserError::UnexpectedEnd(last_loc, ']'))
     }
 
     ///
@@ -823,7 +837,10 @@ impl Value {
 
         let mut i = -1;
 
+        let mut last_loc: TokenContent = TokenContent::unit();
+
         while let Some(tkn) = iter.peek() {
+            last_loc = tkn.content().clone();
             i += 1;
             println!("E: {}", format[format_i]);
             println!("{} {}", i.to_string().color("#FFAA00"), tkn);
@@ -866,7 +883,7 @@ impl Value {
             format_i = (format_i + 1) % 4;
         }
 
-        todo!();
+        Err(ParserError::UnexpectedEnd(last_loc, '}'))
     }
 
     ///
@@ -936,6 +953,16 @@ impl Value {
 
         lines.join("\n")
     }
+
+    pub fn content(&self) -> &TokenContent {
+        match self {
+            Value::Object(l, _) => l,
+            Value::Array(l, _) => l,
+            Value::StringLiteral(l, _) => l,
+            Value::NumberLiteral(l, _) => l,
+            Value::NullLiteral(l) => l,
+        }
+    }
 }
 
 impl Display for Value {
@@ -979,6 +1006,17 @@ where
                     format!("\"{}\"", tmp.content.escape_debug()).blue(),
                     "-->".blue().bold(),
                     format!("{}:{}", tmp.start.0, tmp.start.1).yellow().bold(),
+                )
+            },
+            Self::UnexpectedEnd(s, e) => {
+                let tmp: TokenContent = T::into(s.clone());
+                write!(
+                    f,
+                    "{} {}\n  after {} --> Expected a '{}'",
+                    "Error -".red(),
+                    "Unexpected End of token".bold().red(),
+                    format!("{}:{}", tmp.start.0, tmp.start.1).yellow().bold(),
+                    e
                 )
             }
         }

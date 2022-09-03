@@ -32,6 +32,7 @@ pub use parser::Source;
 pub use parser::ParserError;
 pub use parser::TokenContent;
 pub use parser::Value;
+pub use indexer::Indexer;
 use parser::Tokenizer;
 
 ///

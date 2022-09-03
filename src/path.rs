@@ -1,10 +1,10 @@
-use std::{fmt::Display, iter::Peekable, slice::Iter, str::FromStr};
+use std::{fmt::Display, iter::Peekable, slice::Iter, hash::Hash, };
 
 use colored::Colorize;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::parser::{end_escape_lookbehind, TokenParser};
+use crate::{parser::{end_escape_lookbehind, }, Value};
 pub trait Segment {
     fn _path_to_string(&self) -> String;
     fn _path_to_string_debug(&self) -> String;
@@ -50,7 +50,8 @@ impl Segment for usize {
     }
 }
 
-enum PathSegment {
+#[derive(Clone, PartialEq, Eq)]
+pub enum PathSegment {
     Index(usize),
     Key(String),
 }
@@ -71,6 +72,16 @@ impl Display for PathSegment {
             Self::Key(i) => i._path_to_string_debug(),
         };
         write!(f, "{}", a)
+    }
+}
+
+impl<'a> From<&'a Value> for PathSegment {
+    fn from(v: &'a Value) -> Self {
+        match v {
+            Value::StringLiteral(_, v) => Self::Key(v.clone()),
+            Value::NumberLiteral(_, v) => Self::Index(v.clone() as usize),
+            _ => unimplemented!()
+        } 
     }
 }
 
@@ -103,7 +114,47 @@ impl From<usize> for PathSegment {
     }
 }
 
+#[derive(PartialEq, Eq, Clone)]
 pub struct JSONPath(Vec<PathSegment>);
+
+impl JSONPath {
+    pub fn push<T: Into<PathSegment>>(&self, s : T) -> JSONPath {
+        Self({
+            let mut vec = vec![];
+            vec.extend_from_slice(self.0.as_slice());
+            vec.push(s.into());
+            vec
+        })
+    }
+
+    ///
+    /// Check to see if two paths contain each other.
+    /// 
+    #[allow(dead_code)]
+    fn contains(&self, other: &Self) -> bool {
+        for (i, seg_b) in self.0.iter().enumerate() {
+            if let Some(seg_a) = other.0.get(i) {
+                match seg_a == seg_b {
+                    true => continue,
+                    false => return false
+                }
+            }
+        }
+        return true;
+    }
+}
+
+impl Hash for JSONPath {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state);
+    }
+}
+
+impl Default for JSONPath {
+    fn default() -> Self {
+        Self(vec![])
+    }
+}
 
 impl Into<String> for JSONPath {
     fn into(self) -> String {
@@ -133,6 +184,9 @@ impl Display for JSONPath {
 impl TryFrom<String> for JSONPath {
     type Error = String;
 
+    ///
+    /// Attempt to parse a string into a JSON Path.
+    /// 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         #[derive(Clone, Debug)]
         enum Delim {
@@ -437,8 +491,7 @@ mod test {
 
     #[test]
     fn help() {
-        let key = "string";
-        path!($["apple"].key["apples"][0]);
+        path!($["apple s"].key["apples"][0]);
     }
 
     #[test]

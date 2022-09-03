@@ -1,0 +1,16 @@
+{
+  "fruits": {
+    "apple": {
+      "en": "apple",
+      "it": "mela"
+    },
+    "banana": {
+      "en": "banana",
+      "it": "banana"
+    },
+    "pineapple": {
+      "en": "pineapple",
+      "it": "ananas"
+    }
+  }
+}
