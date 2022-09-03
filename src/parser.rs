@@ -23,7 +23,6 @@ pub trait Unit {
 /// Represents any error that can occur during
 /// tokenization, or tree parsing
 ///
-#[derive(Debug)]
 pub enum ParserError<T>
 where
     T: Into<TokenContent>,
@@ -641,12 +640,13 @@ impl Tokenizer {
     ///
     /// ## Example
     /// ```rust
-    /// let mut src = Source::new(r#"{"source": "code"}"#);
+    /// use json_tree::{Source, Tokenizer};
+    /// let mut src = Source::new(r#"{"source": "code"}"#.to_string());
     ///
     /// match Tokenizer::tokenize(&mut src) {
     ///     // Do something cool with the text tokens,
     ///     // such as putting them into a tree
-    ///     Ok(t) => todo!()
+    ///     Ok(t) => {}
     ///
     ///     // Print a prettily-formatted error to console.
     ///     Err(err) => println!("{}", err)
@@ -766,7 +766,8 @@ impl Value {
     /// ```
     /// Method:
     /// ```rust
-    /// let mut src = Source::new(r#"{ "abc": [1, 2, 3] }"#);
+    /// use json_tree::{Source, Tokenizer, Value};
+    /// let mut src = Source::new(r#"{ "abc": [1, 2, 3] }"#.to_string());
     ///
     /// // We can unwrap in this example, since it's valid JSON.
     /// let tokens = Tokenizer::tokenize(&mut src).unwrap();
@@ -1103,13 +1104,22 @@ where
                     "Error -".red(),
                     "Unexpected End of token".bold().red(),
                     format!("{}:{}", tmp.start.0, tmp.start.1).yellow().bold(),
-                    e
+                    e.to_string().blue()
                 )
             }
         }
     }
 }
 
+impl<T> Debug for ParserError<T>
+    where T: Into<TokenContent> + Clone
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\n\n")?;
+        <Self as Display>::fmt(&self, f)?;
+        write!(f, "\n\n")
+    }
+}
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -1255,5 +1265,17 @@ mod tests {
             },
             Err(err) => println!("{}", err),
         }
+    }
+
+    #[test]
+    fn pretty_unwrap() {
+        // Makes a nice error message,
+        //  even if you're lazy and just `.unwrap()` it.
+        
+        let mut src = Source::new(fs::read_to_string("./tests/unwrap_pretty.txt").unwrap());
+
+        let tokens = Tokenizer::tokenize(&mut src).unwrap();
+
+        Value::parse(&mut tokens.iter().peekable()).expect_err("Should have gotten an error!");
     }
 }

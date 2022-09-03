@@ -1,0 +1,17 @@
+{
+    "Shopping List": {
+        "Tesco": [
+            "Pancetta",
+            "Spaghetti",
+            "Eggs"
+        ],
+        "Sainsbury's": [
+            "Potato Wedges",
+            "Potato Waffles",
+            "Potato Peeler",
+            "Potatoes",
+            {
+                "if"  : "Milk",
+                "buy" : ["Asparagus", "Asparagus"]
+
+}

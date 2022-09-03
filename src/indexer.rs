@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn index_object() {
-        let mut src = Source::new(fs::read_to_string("./tests/4.txt").unwrap());
+        let mut src = Source::new(fs::read_to_string("./tests/object_index.json").unwrap());
 
         let tokens = Tokenizer::tokenize(&mut src);
 

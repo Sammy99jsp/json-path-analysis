@@ -50,7 +50,7 @@ impl Segment for usize {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PathSegment {
     Index(usize),
     Key(String),
@@ -114,7 +114,7 @@ impl From<usize> for PathSegment {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct JSONPath(Vec<PathSegment>);
 
 impl JSONPath {
@@ -490,13 +490,13 @@ mod test {
     use super::JSONPath;
 
     #[test]
-    fn help() {
+    fn helper_macro() {
         path!($["apple s"].key["apples"][0]);
     }
 
     #[test]
     fn parsing() {
-        let p: JSONPath = r#"$["apples are cool!"][1]."#.to_string().try_into().unwrap();
-        println!("{}", p);
+        JSONPath::try_from(r#"$["apples are cool!"][1]."#.to_string()).expect_err("Should have Error!");
+        //                                            ^ Syntax Error here. 
     }
 }

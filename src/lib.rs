@@ -11,12 +11,12 @@
 //! with JSON files for use cases such as configs.
 //! 
 //! Instead of a General Error, such as:
-//! ```
+//! ```txt
 //!     Invalid value for "mood": "rambunctious"
 //! ```
 //! 
 //! A more specific and useful (à la Rust) error can be given:
-//! ```
+//! ```txt
 //!     Invalid value for "mood" at [69:42]
 //!         "mood" : "rambunctious"
 //!                   ^^^^^^^^^^^^    
@@ -33,7 +33,7 @@ pub use parser::ParserError;
 pub use parser::TokenContent;
 pub use parser::Value;
 pub use indexer::Indexer;
-use parser::Tokenizer;
+pub use parser::Tokenizer;
 
 ///
 /// Parses JSON files into a Value,
