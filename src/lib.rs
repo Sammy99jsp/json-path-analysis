@@ -24,9 +24,9 @@
 //! The above can aid users in fixing the problem much sooner as it gives specific line and column numbers.
 //! 
 
-mod parser;
-mod indexer;
-mod path;
+pub mod parser;
+pub mod indexer;
+pub mod path;
 
 pub use parser::Source;
 pub use parser::ParserError;
