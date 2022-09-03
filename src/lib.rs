@@ -37,6 +37,7 @@ pub use crate::parser::Tokenizer;
 pub use crate::indexer::Location;
 pub use crate::path::JSONPath;
 pub use crate::path::PathSegment;
+pub use crate::indexer::Index;
 
 ///
 /// Parses JSON files into a Value,
