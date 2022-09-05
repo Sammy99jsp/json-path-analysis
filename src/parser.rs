@@ -200,6 +200,12 @@ impl<'a> From<&'a str> for TokenContent {
     }
 }
 
+impl ToString for TokenContent {
+    fn to_string(&self) -> String {
+        self.content.clone()
+    }
+}
+
 
 #[cfg(feature = "jsonc")]
 #[derive(Clone, Debug)]
