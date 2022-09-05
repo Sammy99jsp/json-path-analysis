@@ -168,7 +168,7 @@ impl TokenContent {
         self.start.clone()
     }
 
-    pub fn content(&self) -> String {
+    pub fn get_content(&self) -> String {
         self.content.clone()
     }
 }
