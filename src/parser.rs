@@ -31,6 +31,7 @@ where
     UnexpectedEnd(T, char)
 }
 
+
 impl Into<ParserError<TokenContent>> for ParserError<CharLoc> {
     fn into(self) -> ParserError<TokenContent> {
         match self {
@@ -129,6 +130,14 @@ pub struct TokenContent {
     /// Original (line, col) location within source code.
     ///
     start: (usize, usize),
+}
+
+impl std::ops::Deref for TokenContent {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
 }
 
 
