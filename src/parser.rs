@@ -124,7 +124,7 @@ pub struct TokenContent {
     ///
     /// Raw source string.
     ///
-    content: String,
+    pub content: String,
 
     ///
     /// Original (line, col) location within source code.
@@ -150,6 +150,12 @@ impl Unit for TokenContent {
             content: "".to_string(),
             start: (0, 0),
         }
+    }
+}
+
+impl ToString for TokenContent {
+    fn to_string(&self) -> String {
+        self.content.clone()
     }
 }
 
@@ -200,11 +206,6 @@ impl<'a> From<&'a str> for TokenContent {
     }
 }
 
-impl ToString for TokenContent {
-    fn to_string(&self) -> String {
-        self.content.clone()
-    }
-}
 
 
 #[cfg(feature = "jsonc")]
