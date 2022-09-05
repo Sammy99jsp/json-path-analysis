@@ -132,16 +132,6 @@ pub struct TokenContent {
     start: (usize, usize),
 }
 
-impl std::ops::Deref for TokenContent {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-
-
-
 impl AddAssign for TokenContent {
     fn add_assign(&mut self, rhs: Self) {
         self.content.push_str(&rhs.content);
@@ -176,6 +166,10 @@ impl TokenContent {
     /// 
     pub fn loc(&self) -> (usize, usize) {
         self.start.clone()
+    }
+
+    pub fn content(&self) -> String {
+        self.content.clone()
     }
 }
 
